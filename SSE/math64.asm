@@ -20,24 +20,19 @@ section .text
 	movsd xmm2, xmm1	; term
 	movsd xmm3, xmm2	; divisor for term
 	movsd xmm4, xmm3	; used to add 1.0 to xmm3
-	mov rdi, 0xbca0000000000000
-	movq xmm5, rdi		; move negative term limit into xmm5
-	mov rdi, 0x3ca0000000000000
-	movq xmm6, rdi		; move positive term limit into xmm6
-	
+	xorpd xmm5, xmm5
 	.expLoop:		    ; calculating the Taylor series
 		mulsd xmm2, %1
 		divsd xmm2, xmm3
 		addsd xmm3, xmm4
 		addsd xmm1, xmm2
-		ucomisd xmm2, xmm6
-		jnc .expLoop
-		ucomisd xmm2, xmm5
-		jc .expLoop
+		ucomisd xmm1, xmm5	; stop, when the sum doesn't change anymore
+		movsd xmm5, xmm1
+		jnz .expLoop
 %endmacro
 
 exp64:			        ; calculates exp(x) for any double-precision floating-point input
-			            ; modifies the following registers: rdi, rsi, xmm0 - xmm7
+			            ; modifies the following registers: rdi, rsi, xmm0 - xmm6
 	push rbp
 	mov rbp, rsp
 	
@@ -51,12 +46,12 @@ exp64:			        ; calculates exp(x) for any double-precision floating-point inp
 	
 	call powfi64			; exp(rdi)
 	
-	movsd xmm7, xmm0		; store exp(rdi) in xmm7
+	movsd xmm6, xmm0		; store exp(rdi) in xmm7
 	movsd xmm0, xmm2		; store the fractional exponent in xmm0
 	
 	expSmall64 xmm0			; exp(fractional Part) by using a macro
 	movsd xmm0, xmm1
-	mulsd xmm0, xmm7		; exp(int) * exp(fraction) in xmm0
+	mulsd xmm0, xmm6		; exp(int) * exp(fraction) in xmm0
 	
 	mov rsp, rbp
 	pop rbp
@@ -111,7 +106,7 @@ powfi64:		            ; calculates x^n, where x is a real (double-precision) num
 log64:				        ; calculates the natural logarithm of a double-precision floating-point number
 				            ; returns NaN, if the argument is negative or NaN
 				            ; returns negative infinity, if the argument is +0.0
-				            ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r11, xmm0 - xmm7
+				            ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	mov rdi, 0x8000000000000000
@@ -134,8 +129,8 @@ log64:				        ; calculates the natural logarithm of a double-precision float
 	mov r10, 3
 	
 	.newtonLoop:
+		movsd xmm7, xmm1
 		movsd xmm0, xmm1
-		movq r11, xmm1
 		call exp64
 		movq xmm2, rax
 		movsd xmm3, xmm2
@@ -143,7 +138,7 @@ log64:				        ; calculates the natural logarithm of a double-precision float
 		addsd xmm3, xmm0
 		divsd xmm2, xmm3
 		addsd xmm2, xmm2
-		movq xmm1, r11
+		movsd xmm1, xmm7
 		addsd xmm1, xmm2
 		dec r10
 		jnz .newtonLoop
@@ -269,6 +264,120 @@ tanh64:			            ; calculates the hyperbolic tangent of a double-precision 
 	addsd xmm1, xmm0
 	subsd xmm0, xmm2
 	divsd xmm0, xmm1
+	mov rsp, rbp
+	pop rbp
+	ret
+
+%macro sinTaylor64 1		; calculates the sine of a double-precision floating-point number using the Taylor series for the sine function
+							; modifies the following registers: rdi, (xmm0), xmm1 - xmm6
+	movsd xmm1, %1		; sum
+	movsd xmm4, xmm1	; term
+	mulsd %1, %1		; x*x
+	xorpd xmm2, xmm2
+	subsd xmm2, %1
+	movsd %1, xmm2		; -x*x
+	mov rdi, 0x3ff0000000000000
+	movq xmm2, rdi
+	movsd xmm3, xmm2	; 1.0 in xmm2, xmm3 and xmm5
+	movsd xmm5, xmm3	; xmm3 is the incrementor
+	mov rdi, 0xc000000000000000
+	movq xmm6, rdi		; -2.0 in xmm6
+	
+	.taylorLoop:
+		addsd xmm2, xmm3	; increment xmm2
+		movsd xmm5, xmm2	; set up denominator of term
+		addsd xmm2, xmm3	; increment xmm2 again
+		mulsd xmm5, xmm2	; multiply xmm2 and xmm5 together
+		divsd xmm4, xmm5	; divide xmm5 from the term
+		mulsd xmm4, %1
+		addsd xmm1, xmm4
+		ucomisd xmm1, xmm6
+		movsd xmm6, xmm1
+		jnz .taylorLoop
+	movsd xmm0, xmm1
+%endmacro
+
+sin64:			; calculates the sine of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, xmm0 - xmm6
+	mov rdi, 0x401921fb54442d18
+	movq xmm1, rdi	; 2*pi in xmm1
+	movsd xmm2, xmm0	; copy input value
+	divsd xmm2, xmm1	; see how often 2 * pi in the input
+	cvtsd2si rdi, xmm2	; make it an integer in rdi
+	mov rcx, 0x43b0000000000000	; threshold
+	movq xmm3, rcx		; threshold in xmm3
+	movq rsi, xmm2		; store bits of xmm2 in rsi
+	ucomisd xmm2, xmm3	; is xmm2 smaller than 2^60?
+	cmovc rsi, rdi		; if so, copy the integer quotient into rsi
+	cvtsi2sd xmm2, rsi	; quotient to xmm2
+	mulsd xmm1, xmm2	; multiply the quotient with 2 * pi
+	subsd xmm0, xmm1	; subtract it from the input
+	
+	sinTaylor64 xmm0
+	ret
+
+%macro cosTaylor64 1		; calculates the cosine of a double-precision floating-point number using the Taylor series for the cosine function
+				; modifies the following registers: rdi, (xmm0), xmm1 - xmm6
+	mov rdi, 0x3ff0000000000000
+	movq xmm1, rdi		; sum of the series
+	mulsd %1, %1		; x*x
+	xorpd xmm2, xmm2
+	subsd xmm2, %1
+	movsd %1, xmm2		; -x*x
+	movsd xmm3, xmm1	; factor for factorial in denominator
+	movsd xmm4, xmm3	; incrementor of factor
+	movsd xmm2, xmm4	; term
+	mov rdi, 0xc000000000000000
+	movq xmm5, rdi		; sum to test against
+	movsd xmm6, xmm2	; single factor for factorial
+
+	.taylorLoop:
+		movsd xmm3, xmm6
+		addsd xmm6, xmm4
+		mulsd xmm3, xmm6
+		addsd xmm6, xmm4
+		divsd xmm2, xmm3
+		mulsd xmm2, %1
+		addsd xmm1, xmm2
+		ucomisd xmm1, xmm5
+		movsd xmm5, xmm1
+		jnz .taylorLoop
+	movsd xmm0, xmm1
+%endmacro
+
+cos64:		; calculates the cosine of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, xmm0 - xmm6
+	mov rdi, 0x401921fb54442d18
+	movq xmm1, rdi	; 2*pi in xmm1
+	movsd xmm2, xmm0	; copy input value
+	divsd xmm2, xmm1	; see how often 2 * pi in the input
+	cvtsd2si rdi, xmm2	; make it an integer in rdi
+	mov rcx, 0x43b0000000000000	; threshold
+	movq xmm3, rcx		; threshold in xmm3
+	movq rsi, xmm2		; store bits of xmm2 in rsi
+	ucomisd xmm2, xmm3	; is xmm2 smaller than 2^60?
+	cmovc rsi, rdi		; if so, copy the integer quotient into rsi
+	cvtsi2sd xmm2, rsi	; quotient to xmm2
+	mulsd xmm1, xmm2	; multiply the quotient with 2 * pi
+	subsd xmm0, xmm1	; subtract it from the input
+	
+	cosTaylor64 xmm0
+	ret
+
+tan64:		; calculates the tangent of a double-precision floating-point number
+				; modifies the following registers: rdi, r8, xmm0 - xmm7
+	push rbp
+	mov rbp, rsp
+	
+	movsd xmm7, xmm0
+	call sin64
+	movq r8, xmm0
+	movsd xmm0, xmm7
+	call cos64
+	movq xmm1, r8
+	divsd xmm1, xmm0	; tan(x) = sin(x) / cos(x)
+	movsd xmm0, xmm1
+	
 	mov rsp, rbp
 	pop rbp
 	ret
