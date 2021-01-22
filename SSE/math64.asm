@@ -365,7 +365,7 @@ cos64:		; calculates the cosine of a double-precision floating-point number
 	ret
 
 tan64:		; calculates the tangent of a double-precision floating-point number
-				; modifies the following registers: rdi, r8, xmm0 - xmm7
+				; modifies the following registers: rdi, rsi, rcx, r8, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	
