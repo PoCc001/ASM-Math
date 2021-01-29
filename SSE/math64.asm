@@ -13,15 +13,15 @@ section .data
 section .bss
 
 section .text
-%macro expSmall64 1	    ; calculates exp(x) where x is between -1.0 and 1.0 for 64-Bit float values
-			            ; modifies the following registers: rdi, xmm1, xmm2, xmm3, xmm4, xmm5
+%macro expSmall64 1	    	; calculates exp(x) where x is between -1.0 and 1.0 for 64-Bit float values
+				; modifies the following registers: rdi, xmm1, xmm2, xmm3, xmm4, xmm5
 	mov rdi, 0x3ff0000000000000
-	movq xmm1, rdi	    ; move 1.0 into xmm1 (sum)
+	movq xmm1, rdi	    	; move 1.0 into xmm1 (sum)
 	movsd xmm2, xmm1	; term
 	movsd xmm3, xmm2	; divisor for term
 	movsd xmm4, xmm3	; used to add 1.0 to xmm3
 	xorpd xmm5, xmm5
-	.expLoop:		    ; calculating the Taylor series
+	.expLoop:		; calculating the Taylor series
 		mulsd xmm2, %1
 		divsd xmm2, xmm3
 		addsd xmm3, xmm4
@@ -32,7 +32,7 @@ section .text
 %endmacro
 
 exp64:			        ; calculates exp(x) for any double-precision floating-point input
-			            ; modifies the following registers: rdi, rsi, xmm0 - xmm6
+				; modifies the following registers: rdi, rsi, xmm0 - xmm6
 	push rbp
 	mov rbp, rsp
 	
@@ -57,8 +57,8 @@ exp64:			        ; calculates exp(x) for any double-precision floating-point inp
 	pop rbp
 	ret
 
-powfi64:		            ; calculates x^n, where x is a real (double-precision) number (xmm0) and n is a 64-bit signed integer (rdi)
-			                ; modifies the following registers: rdi, rsi, rcx, rdx, r8, r9, xmm0, xmm1
+powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) and n is a 64-bit signed integer (rdi)
+				; modifies the following registers: rdi, rsi, rcx, rdx, r8, r9, xmm0, xmm1
 	mov rdx, 0x3ff0000000000000
 	movsd xmm1, xmm0
 	movq xmm0, rdx
@@ -103,10 +103,10 @@ powfi64:		            ; calculates x^n, where x is a real (double-precision) num
 	sub rax, 0x3ff
 %endmacro
 
-log64:				        ; calculates the natural logarithm of a double-precision floating-point number
-				            ; returns NaN, if the argument is negative or NaN
-				            ; returns negative infinity, if the argument is +0.0
-				            ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
+log64:				; calculates the natural logarithm of a double-precision floating-point number
+				; returns NaN, if the argument is negative or NaN
+				; returns negative infinity, if the argument is +0.0
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	mov rdi, 0x8000000000000000
@@ -117,7 +117,7 @@ log64:				        ; calculates the natural logarithm of a double-precision float
 	xor rsi, rdi
 	jz .neginf
 	
-	ldInprecise64 xmm0	    ; use macro
+	ldInprecise64 xmm0	; use macro
 	
 	cvtsi2sd xmm1, rax
 	mov rax, 0x3fe62e42fefa39ef	; log(2) in xmm2
@@ -163,10 +163,10 @@ log64:				        ; calculates the natural logarithm of a double-precision float
 		pop rbp
 		ret
 
-log1064:		            ; calculates the common logarithm (base 10) of a double-precision floating-point number in xmm0
-			                ; returns NaN, if the argument is negative or NaN
-			                ; returns negative infinity, if the argument is +0.0
-			                ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+log1064:			; calculates the common logarithm (base 10) of a double-precision floating-point number in xmm0
+				; returns NaN, if the argument is negative or NaN
+				; returns negative infinity, if the argument is +0.0
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	call log64
@@ -177,10 +177,10 @@ log1064:		            ; calculates the common logarithm (base 10) of a double-pr
 	pop rbp
 	ret
 
-log264:			            ; calculates the binary logarithm (base 2) of a double-precision floating-point number in xmm0
-			                ; returns NaN, if the argument is negative or NaN
-			                ; returns negative infinity, if the argument is +0.0
-			                ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+log264:				; calculates the binary logarithm (base 2) of a double-precision floating-point number in xmm0
+				; returns NaN, if the argument is negative or NaN
+				; returns negative infinity, if the argument is +0.0
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	call log64
@@ -191,9 +191,9 @@ log264:			            ; calculates the binary logarithm (base 2) of a double-pre
 	pop rbp
 	ret
 
-powff64:		            ; calculates x^y, where x (xmm0) and y (xmm1) are both double-precision floating-point numbers
-			                ; returns NaN, if one argument is NaN, or xmm0 is negative and xmm1 is not an integer
-			                ; modifies the following registers: rdi, (rsi, rax, rcx, rdx, r8, r9, r10, r11), xmm0, xmm1, (xmm2 - xmm7)
+powff64:			; calculates x^y, where x (xmm0) and y (xmm1) are both double-precision floating-point numbers
+				; returns NaN, if one argument is NaN, or xmm0 is negative and xmm1 is not an integer
+				; modifies the following registers: rdi, (rsi, rax, rcx, rdx, r8, r9, r10, r11), xmm0, xmm1, (xmm2 - xmm7)
 	push rbp
 	mov rbp, rsp
 	cvtsd2si rdi, xmm1
@@ -218,8 +218,8 @@ powff64:		            ; calculates x^y, where x (xmm0) and y (xmm1) are both dou
 		pop rbp
 		ret
 
-sinh64:			            ; calculates the hyperbolic sine of a double-precision floating-point number
-			                ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+sinh64:				; calculates the hyperbolic sine of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	call exp64
@@ -235,8 +235,8 @@ sinh64:			            ; calculates the hyperbolic sine of a double-precision flo
 	pop rbp
 	ret
 
-cosh64:			            ; calculates the hyperbolic cosine of a double-precision floating-point number
-			                ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+cosh64:				; calculates the hyperbolic cosine of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	call exp64
@@ -252,8 +252,8 @@ cosh64:			            ; calculates the hyperbolic cosine of a double-precision f
 	pop rbp
 	ret
 
-tanh64:			            ; calculates the hyperbolic tangent of a double-precision floating-point number
-			                ; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+tanh64:				; calculates the hyperbolic tangent of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	addsd xmm0, xmm0
@@ -269,7 +269,7 @@ tanh64:			            ; calculates the hyperbolic tangent of a double-precision 
 	ret
 
 %macro sinTaylor64 1		; calculates the sine of a double-precision floating-point number using the Taylor series for the sine function
-							; modifies the following registers: rdi, (xmm0), xmm1 - xmm6
+				; modifies the following registers: rdi, (xmm0), xmm1 - xmm6
 	movsd xmm1, %1		; sum
 	movsd xmm4, xmm1	; term
 	mulsd %1, %1		; x*x
@@ -297,7 +297,7 @@ tanh64:			            ; calculates the hyperbolic tangent of a double-precision 
 	movsd xmm0, xmm1
 %endmacro
 
-sin64:			; calculates the sine of a double-precision floating-point number
+sin64:				; calculates the sine of a double-precision floating-point number
 				; modifies the following registers: rdi, rsi, xmm0 - xmm6
 	mov rdi, 0x401921fb54442d18
 	movq xmm1, rdi	; 2*pi in xmm1
@@ -345,7 +345,7 @@ sin64:			; calculates the sine of a double-precision floating-point number
 	movsd xmm0, xmm1
 %endmacro
 
-cos64:		; calculates the cosine of a double-precision floating-point number
+cos64:				; calculates the cosine of a double-precision floating-point number
 				; modifies the following registers: rdi, rsi, xmm0 - xmm6
 	mov rdi, 0x401921fb54442d18
 	movq xmm1, rdi	; 2*pi in xmm1
@@ -364,8 +364,8 @@ cos64:		; calculates the cosine of a double-precision floating-point number
 	cosTaylor64 xmm0
 	ret
 
-tan64:		; calculates the tangent of a double-precision floating-point number
-				; modifies the following registers: rdi, rsi, rcx, r8, xmm0 - xmm7
+tan64:				; calculates the tangent of a double-precision floating-point number
+				; modifies the following registers: rdi, r8, xmm0 - xmm7
 	push rbp
 	mov rbp, rsp
 	
@@ -378,6 +378,57 @@ tan64:		; calculates the tangent of a double-precision floating-point number
 	divsd xmm1, xmm0	; tan(x) = sin(x) / cos(x)
 	movsd xmm0, xmm1
 	
+	mov rsp, rbp
+	pop rbp
+	ret
+
+arsinh64:			; calculates the inverse hyperbolic sine of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
+	push rbp
+	mov rbp, rsp
+	movsd xmm1, xmm0
+	mulsd xmm1, xmm1
+	mov rdi, 0x3ff0000000000000
+	movq xmm2, rdi
+	addsd xmm1, xmm2
+	sqrtsd xmm1, xmm1
+	addsd xmm0, xmm1
+	call log64
+	mov rsp, rbp
+	pop rbp
+	ret
+
+arcosh64:			; calculates the inverse hyperbolic cosine of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
+	push rbp
+	mov rbp, rsp
+	movsd xmm1, xmm0
+	mulsd xmm1, xmm1
+	mov rdi, 0x3ff0000000000000
+	movq xmm2, rdi
+	subsd xmm1, xmm2
+	sqrtsd xmm1, xmm1
+	addsd xmm0, xmm1
+	call log64
+	mov rsp, rbp
+	pop rbp
+	ret
+
+artanh64:			; calculates the inverse hyperbolic tangent of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
+	push rbp
+	mov rbp, rsp
+	mov rdi, 0x3ff0000000000000
+	movq xmm1, rdi
+	addsd xmm1, xmm0
+	movq xmm2, rdi
+	subsd xmm2, xmm0
+	divsd xmm1, xmm2
+	movsd xmm0, xmm1
+	call log64
+	mov rdi, 0x3fe0000000000000
+	movq xmm1, rdi
+	mulsd xmm0, xmm1
 	mov rsp, rbp
 	pop rbp
 	ret
