@@ -432,3 +432,141 @@ artanh64:			; calculates the inverse hyperbolic tangent of a 64-bit floating-poi
 	mov rsp, rbp
 	pop rbp
 	ret
+
+%macro atanTaylor64 1		; calculates the arctan of a 64-bit floating-point number
+				; via a Taylor series
+				; modifies the following registers: rdi, rsi, xmm0 - xmm6
+	movsd xmm1, %1
+	mulsd xmm1, xmm1	
+	movq rdi, xmm1
+	mov rsi, 0x8000000000000000
+	or rdi, rsi
+	movq xmm1, rdi		; -x*x
+	mov rdi, 0x3ff0000000000000
+	movq xmm3, rdi		; denominator
+	mov rdi, 0x4000000000000000
+	movq xmm4, rdi		; incrementor for denominator = 2.0
+	movsd xmm5, %1		; power
+	xorpd xmm6, xmm6	; test sum
+				; %1 is the sum
+	.taylorLoop:
+		mulsd xmm5, xmm1
+		movsd xmm2, xmm5
+		addsd xmm3, xmm4
+		divsd xmm2, xmm3
+		addsd %1, xmm2
+		ucomisd %1, xmm6
+		movsd xmm6, %1
+		jnz .taylorLoop
+%endmacro
+
+atan64:				; calculates the arctangent of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rcx, rax, xmm0 - xmm6
+	mov rcx, 0x8000000000000000
+	movq rdi, xmm0
+	and rcx, rdi
+	xor rdi, rcx
+	movq xmm0, rdi		; rcx has the information about the sign of the input
+	mov rdi, 0x3ff0000000000000
+	movq xmm1, rdi
+	movsd xmm2, xmm0
+	mulsd xmm2, xmm2
+	addsd xmm2, xmm1
+	sqrtsd xmm2, xmm2
+	addsd xmm2, xmm1
+	divsd xmm0, xmm2
+	ucomisd xmm0, xmm1
+	lahf
+	jc .smallerThanOne
+	
+	divsd xmm1, xmm0
+	movsd xmm0, xmm1
+	
+	.smallerThanOne:
+		atanTaylor64 xmm0
+		sahf
+		jc .noRecip
+		
+		mov rdi, 0x3ff921fb54442d18
+		movq xmm1, rdi
+		subsd xmm1, xmm0
+		movsd xmm0, xmm1
+	
+	.noRecip:
+		movq rdi, xmm0
+		xor rdi, rcx
+		movq xmm0, rdi
+		addsd xmm0, xmm0
+	ret
+
+asin64:				; calculates the arcsine of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, xmm0 - xmm6
+	push rbp
+	mov rbp, rsp
+	mov rdi, 0x3ff0000000000000
+	movq xmm1, rdi
+	movsd xmm2, xmm0
+	mulsd xmm2, xmm2
+	subsd xmm1, xmm2
+	movq rdi, xmm1
+	and rdi, rdi
+	jz .one
+	sqrtsd xmm1, xmm1
+	divsd xmm0, xmm1
+	
+	call atan64
+	
+	mov rsp, rbp
+        pop rbp
+        ret
+	
+	.one:
+		movq rdi, xmm0
+                mov rsi, 0x3ff921fb54442d18
+                mov rdx, 0xbff921fb54442d18
+                mov rcx, 0x8000000000000000
+                and rcx, rdi
+                cmovnz rsi, rdx
+	
+	mov rsp, rbp
+	pop rbp
+	ret
+
+acos64:				; calculates the arccosine of a 64-bit floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, xmm0 - xmm6
+	push rbp
+	mov rbp, rsp
+	mov rdi, 0x3ff0000000000000
+        movq xmm1, rdi
+        movsd xmm2, xmm0
+        mulsd xmm2, xmm2
+        subsd xmm1, xmm2
+	movq rdi, xmm1
+	and rdi, rdi
+	jz .one
+        sqrtsd xmm1, xmm1
+        divsd xmm0, xmm1
+
+        call atan64
+	
+	mov rdi, 0x3ff921fb54442d18
+	movq xmm1, rdi
+	subsd xmm1, xmm0
+	movsd xmm0, xmm1
+	
+	mov rsp, rbp
+	pop rbp
+	ret
+	
+	.one:
+		movq rdi, xmm0
+		xor rsi, rsi
+		mov rdx, 0x400921fb54442d18
+		mov rcx, 0x8000000000000000
+		and rcx, rdi
+		cmovnz rsi, rdx
+		movq xmm0, rsi
+		
+	mov rsp, rbp
+	pop rbp
+	ret
