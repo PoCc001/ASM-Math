@@ -638,7 +638,7 @@ agm64:				; calculates the arithmetic-geometric mean of two 64-bit floating-poin
 		movsd xmm3, xmm0
 		jnz .loop
 
-		addsd xmm0, xmm1
-		mulsd xmm0, xmm4
-		
-		ret
+	addsd xmm0, xmm1
+	mulsd xmm0, xmm4
+	
+	ret
