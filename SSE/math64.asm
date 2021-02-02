@@ -13,6 +13,56 @@ section .data
 section .bss
 
 section .text
+cbrt64:				; calculates the cube root of a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, xmm0 - xmm4
+	movq rax, xmm0
+	mov rsi, 0x8000000000000000
+	and rsi, rax		; sign of the input is in rsi
+	xor rax, rsi		; absolute value of the input in rax
+	movq xmm0, rax
+	xor rdi, rdi
+	xor rdx, rdx
+	xor rax, rdi		; check if the input is 0.0 or -0.0
+	jz .zero
+	mov rdi, 0x3
+	div rdi			; divide by 3
+	mov rdi, 0x2aa0000000000000
+	mov rcx, 0x7ff0000000000000
+	mov dl, 0x20
+	and rcx, rax
+	mov cl, 0x6
+	cmovz cx, dx		; do more iterations, if the input is denormal
+	add rax, rdi
+	movq xmm1, rax
+	mov rdi, 0x10000000000000
+	mov rdx, 0x3fd5555555555555
+	movq xmm3, rdx
+	
+	.newton:
+		movq rdx, xmm1
+		add rdx, rdi
+		movq xmm2, rdx
+		mulsd xmm1, xmm1
+		movsd xmm4, xmm0
+		divsd xmm4, xmm1
+		addsd xmm2, xmm4
+		mulsd xmm2, xmm3
+		movsd xmm1, xmm2
+		dec cl
+		jnz .newton
+	
+	movq rdi, xmm1
+	xor rdi, rsi
+	movq xmm0, rdi
+	
+	ret
+	
+	.zero:
+		movq rdi, xmm0
+		xor rdi, rsi
+		movq xmm0, rdi	
+	ret
+
 %macro expSmall64 1	    	; calculates exp(x) where x is between -1.0 and 1.0 for 64-Bit float values
 				; modifies the following registers: rdi, xmm1, xmm2, xmm3, xmm4, xmm5
 	mov rdi, 0x3ff0000000000000
