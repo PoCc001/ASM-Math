@@ -620,3 +620,25 @@ acos64:				; calculates the arccosine of a 64-bit floating-point number
 	mov rsp, rbp
 	pop rbp
 	ret
+
+agm64:				; calculates the arithmetic-geometric mean of two 64-bit floating-point numbers
+				; modifies the following registers: rdi, rsi, xmm0 - xmm4
+	mov rdi, 0x3fe0000000000000
+	movq xmm4, rdi
+	xorpd xmm3, xmm3
+	
+	.loop:
+		movsd xmm2, xmm0
+		addsd xmm0, xmm1
+		mulsd xmm0, xmm4
+		sqrtsd xmm2, xmm2	; do two sqrts to avoid over- or underflows due to the multiplication
+		sqrtsd xmm1, xmm1
+		mulsd xmm1, xmm2
+		ucomisd xmm0, xmm3
+		movsd xmm3, xmm0
+		jnz .loop
+
+		addsd xmm0, xmm1
+		mulsd xmm0, xmm4
+		
+		ret
