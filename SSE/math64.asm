@@ -153,79 +153,94 @@ powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) 
 	sub rax, 0x3ff
 %endmacro
 
-log64:				; calculates the natural logarithm of a double-precision floating-point number
-				; returns NaN, if the argument is negative or NaN
-				; returns negative infinity, if the argument is +0.0
-				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8 - r10, xmm0 - xmm7
-	push rbp
-	mov rbp, rsp
+log64:				        ; calculates the natural logarithm of a double-precision floating-point number
+				            ; returns NaN, if the argument is negative or NaN
+				            ; returns negative infinity, if the argument is +0.0
+				            ; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
 	mov rdi, 0x8000000000000000
 	movq rsi, xmm0
-	test rsi, rdi
+	and rdi, rsi
 	jnz .nan
 	xor rdi, rdi
-	xor rsi, rdi
+	xor rdi, rsi
 	jz .neginf
 	
-	ldInprecise64 xmm0	; use macro
+	movq rdx, xmm0
+	shr rdx, 52
+	jnz .notDenormal
 	
-	cvtsi2sd xmm1, rax
-	mov rax, 0x3fe62e42fefa39ef	; log(2) in xmm2
-	movq xmm2, rax
+	movq rsi, xmm0
+	bsr rdi, rsi
+	sub edi, 0b110101
+	not edi
+	mov ecx, edi
+	sub rdx, rdi
+	
+	shl rsi, cl
+	movq xmm0, rsi
+	inc dx
+	
+	.notDenormal:
+		sub rdx, 0x3ff
+		movq rdi, xmm0
+		mov rsi, 0x3fffffffffffffff
+		and rdi, rsi
+		mov rsi, 0x3ff0000000000000
+		or rdi, rsi
+		movq xmm0, rdi		; argument is now between 1 and 2
+		sqrtsd xmm0, xmm0	; argument is now between 1 and sqrt(2)
+	
+	movq xmm1, rsi
+	movsd xmm2, xmm1
+	addsd xmm1, xmm0	; (x + 1)
+	subsd xmm0, xmm2	; (x - 1)
+	
+	divsd xmm0, xmm1
+	movsd xmm1, xmm0
+	movsd xmm4, xmm0
+	mulsd xmm4, xmm4	; (x - 1)^2 / (x + 1)^2
+	
+	movq xmm3, rsi		; factor
+	movsd xmm2, xmm3
+	addsd xmm2, xmm2	; incrementor
+	
+	mov rsi, 0xbff0000000000000
+	movq xmm6, rsi
+	
+	.taylorLoop:
+		mulsd xmm1, xmm4
+		addsd xmm3, xmm2
+		movsd xmm5, xmm1
+		divsd xmm5, xmm3
+		addsd xmm0, xmm5
+		ucomisd xmm0, xmm6
+		movsd xmm6, xmm0
+		jnz .taylorLoop
+	
+	mov rdi, 0x20000000000000
+	movq rsi, xmm0
+	add rsi, rdi
+	movq xmm0, rsi
+	
+	mov rdi, 0x3fe62e42fefa39ef
+	movq xmm1, rdi
+	cvtsi2sd xmm2, rdx
 	mulsd xmm1, xmm2
-	
-	movq rax, xmm0
-
-	mov r10, 3
-	
-	.newtonLoop:
-		movsd xmm7, xmm1
-		movsd xmm0, xmm1
-		call exp64
-		movq xmm2, rax
-		movsd xmm3, xmm2
-		subsd xmm2, xmm0
-		addsd xmm3, xmm0
-		divsd xmm2, xmm3
-		addsd xmm2, xmm2
-		movsd xmm1, xmm7
-		addsd xmm1, xmm2
-		dec r10
-		jnz .newtonLoop
-
-	movsd xmm0, xmm1
-	mov rsp, rbp
-	pop rbp
+	addsd xmm0, xmm1
 	
 	ret
 	
 	.nan:
-		mov rax, 0x7fffffffffffffff
-		movq xmm0, rax
-		mov rsp, rbp
-		pop rbp
+		mov rdi, 0x7fffffffffffffff
+		movq xmm0, rdi
+		
 		ret
 	
 	.neginf:
-		mov rax, 0xfff0000000000000
-		movq xmm0, rax
-		mov rsp, rbp
-		pop rbp
+		mov rdi, 0xfff0000000000000
+		movq xmm0, rdi
+		
 		ret
-
-log1064:			; calculates the common logarithm (base 10) of a double-precision floating-point number in xmm0
-				; returns NaN, if the argument is negative or NaN
-				; returns negative infinity, if the argument is +0.0
-				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
-	push rbp
-	mov rbp, rsp
-	call log64
-	mov rdi, 0x3fdbcb7b1526e50e	; log10(e)
-	movq xmm1, rdi
-	mulsd xmm0, xmm1
-	mov rsp, rbp
-	pop rbp
-	ret
 
 log264:				; calculates the binary logarithm (base 2) of a double-precision floating-point number in xmm0
 				; returns NaN, if the argument is negative or NaN
