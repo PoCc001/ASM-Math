@@ -199,10 +199,10 @@ powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) 
 	sub rax, 0x3ff
 %endmacro
 
-log64:				        ; calculates the natural logarithm of a double-precision floating-point number
-				            ; returns NaN, if the argument is negative or NaN
-				            ; returns negative infinity, if the argument is +0.0
-				            ; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
+log64:				; calculates the natural logarithm of a double-precision floating-point number
+				; returns NaN, if the argument is negative or NaN
+				; returns negative infinity, if the argument is +0.0
+				; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
 	mov rdi, 0x8000000000000000
 	movq rsi, xmm0
 	and rdi, rsi
@@ -288,10 +288,25 @@ log64:				        ; calculates the natural logarithm of a double-precision float
 		
 		ret
 
+
+log1064:			; calculates the common logarithm (base 10) of a double-precision floating-point number in xmm0
+				; returns NaN, if the argument is negative or NaN
+				; returns negative infinity, if the argument is +0.0
+				; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
+	push rbp
+	mov rbp, rsp
+	call log64
+	mov rdi, 0x3fdbcb7b1526e50e	; log10(e)
+	movq xmm1, rdi
+	mulsd xmm0, xmm1
+	mov rsp, rbp
+	pop rbp
+	ret
+
 log264:				; calculates the binary logarithm (base 2) of a double-precision floating-point number in xmm0
 				; returns NaN, if the argument is negative or NaN
 				; returns negative infinity, if the argument is +0.0
-				; modifies the following registers: rdi, rsi, rax, rcx, rdx, r8, r9, r10, r11, xmm0 - xmm7
+				; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
 	push rbp
 	mov rbp, rsp
 	call log64
@@ -300,6 +315,24 @@ log264:				; calculates the binary logarithm (base 2) of a double-precision floa
 	mulsd xmm0, xmm1
 	mov rsp, rbp
 	pop rbp
+	ret
+
+logb64:				; calculates the logarithm of x (xmm0) with respect to base y (xmm1) - x and y being two double-precision floating-point numbers
+				; modifies the following registers: rdi, rsi, rax, rcx, rdx, xmm0 - xmm7
+	push rbp
+	mov rbp, rsp
+	
+	movsd xmm1, xmm7
+	call log64
+	movq rax, xmm0
+	movsd xmm0, xmm7
+	call log64
+	movq xmm1, rax
+	divsd xmm0, xmm1
+	
+	mov rsp, rbp
+	pop rbp
+	
 	ret
 	
 log1p64:			; calculates log(1 + x), with x as a double-precision floating-point number.
