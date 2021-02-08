@@ -106,6 +106,52 @@ exp64:			        ; calculates exp(x) for any double-precision floating-point inp
 	mov rsp, rbp
 	pop rbp
 	ret
+	
+exp1m64:			; calculates exp(x) - 1 with x as a double-precision floating-point number
+				; modifies the following registers: rdi, rsi, xmm0 - xmm6
+	push rbp
+	mov rsp, rbp
+	
+	mov rdi, 0x7fffffffffffffff
+	movq rsi, xmm0
+	and rsi, rdi
+	movq xmm1, rsi
+	mov rdi, 0x3fd0000000000000
+	movq xmm2, rdi
+	ucomisd xmm1, xmm2
+	jnc .useExp64
+	
+	movsd xmm1, xmm0
+	movsd xmm3, xmm1
+	mov rdi, 0x3ff0000000000000
+	movq xmm2, rdi
+	movsd xmm4, xmm2
+	xorpd xmm5, xmm5
+	
+	.taylorLoop:
+		mulsd xmm3, xmm1
+		addsd xmm4, xmm2
+		divsd xmm3, xmm4
+		addsd xmm0, xmm3
+		ucomisd xmm0, xmm5
+		movsd xmm5, xmm0
+		jnz .taylorLoop
+	
+	mov rsp, rbp
+	pop rbp
+	
+	ret
+	
+	.useExp64:
+		call exp64
+		mov rdi, 0xbff0000000000000
+		movq xmm1, rdi
+		addsd xmm0, xmm1
+		
+	mov rsp, rbp
+	pop rbp
+	
+	ret
 
 powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) and n is a 64-bit signed integer (rdi)
 				; modifies the following registers: rdi, rsi, rcx, rdx, r8, r9, xmm0, xmm1
@@ -254,6 +300,62 @@ log264:				; calculates the binary logarithm (base 2) of a double-precision floa
 	mulsd xmm0, xmm1
 	mov rsp, rbp
 	pop rbp
+	ret
+	
+log1p64:			; calculates log(1 + x), with x as a double-precision floating-point number.
+				; modifies the following registers: rdi, rsi, rcx, rdx, xmm0 - xmm6
+	push rbp
+	mov rbp, rsp
+	
+	mov rdi, 0x7fffffffffffffff
+	movq rsi, xmm0
+	and rsi, rdi
+	movq xmm1, rsi
+	mov rdi, 0x3fd0000000000000
+	movq xmm2, rdi
+	ucomisd xmm1, xmm2
+	jnc .useLog64
+	mov rdi, 0xbfefffffffffffff
+	movq xmm1, rdi
+	ucomisd xmm0, xmm1
+	jc .useLog64
+	
+	mov rdi, 0x3ff0000000000000
+	movq xmm1, rdi
+	movsd xmm2, xmm1
+	movsd xmm3, xmm0
+	movsd xmm4, xmm3
+	movq rdi, xmm3
+	mov rsi, 0x8000000000000000
+	or rdi, rsi
+	movq xmm3, rdi
+	mov rdi, 0x4000000000000000
+	movq xmm6, rdi
+	
+	.taylorLoop:
+		mulsd xmm4, xmm3
+		movsd xmm5, xmm4
+		addsd xmm1, xmm2
+		divsd xmm5, xmm1
+		addsd xmm0, xmm5
+		ucomisd xmm0, xmm6
+		movsd xmm6, xmm0
+		jnz .taylorLoop
+	
+	mov rsp, rbp
+	pop rbp
+	
+	ret
+	
+	.useLog64:
+		mov rdi, 0x3ff0000000000000
+		movq xmm1, rdi
+		addsd xmm0, xmm1
+		call log64
+		
+	mov rsp, rbp
+	pop rbp
+	
 	ret
 
 powff64:			; calculates x^y, where x (xmm0) and y (xmm1) are both double-precision floating-point numbers
