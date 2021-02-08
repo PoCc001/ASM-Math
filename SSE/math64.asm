@@ -191,13 +191,7 @@ powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) 
 	
 	.zeroExponent:
 
-	ret 
-
-%macro ldInprecise64 1		; estimates the size of ld(xmm0); only modifies rax for the result
-	movq rax, %1
-	shr rax, 52
-	sub rax, 0x3ff
-%endmacro
+	ret
 
 log64:				; calculates the natural logarithm of a double-precision floating-point number
 				; returns NaN, if the argument is negative or NaN
