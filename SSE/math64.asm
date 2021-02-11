@@ -110,7 +110,7 @@ exp64:			        ; calculates exp(x) for any double-precision floating-point inp
 exp1m64:			; calculates exp(x) - 1 with x as a double-precision floating-point number
 				; modifies the following registers: rdi, rsi, xmm0 - xmm6
 	push rbp
-	mov rsp, rbp
+	mov rbp, rsp
 	
 	mov rdi, 0x7fffffffffffffff
 	movq rsi, xmm0
