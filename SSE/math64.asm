@@ -165,21 +165,21 @@ powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) 
 	mov rsi, rdi
 	test rdi, r8
 	cmovnz rdi, r9
-	mov r8, 0b1
+	mov r8d, 0b1
 	bsr rcx, rdi
 	jz .zeroExponent
-	inc rcx
-	mov r9, 0b111111
+	inc ecx
+	mov r9d, 0b111111
 	
 	.powLoop:
-		dec rcx
+		sub ecx, 0b1
 		test rdi, r8
 		jz .zeroBit
 		mulsd xmm0, xmm1
 		.zeroBit:
 			mulsd xmm1, xmm1
 		shl r8, 0b1
-		test rcx, r9
+		test ecx, r9d
 		jnz .powLoop
 		
 	mov r8, 0x8000000000000000
@@ -191,7 +191,7 @@ powfi64:			; calculates x^n, where x is a real (double-precision) number (xmm0) 
 	
 	.zeroExponent:
 
-	ret
+	ret 
 
 log64:				; calculates the natural logarithm of a double-precision floating-point number
 				; returns NaN, if the argument is negative or NaN
@@ -201,7 +201,7 @@ log64:				; calculates the natural logarithm of a double-precision floating-poin
 	movq rsi, xmm0
 	and rdi, rsi
 	jnz .nan
-	xor rdi, rdi
+	xor edi, edi
 	xor rdi, rsi
 	jz .neginf
 	
@@ -214,14 +214,14 @@ log64:				; calculates the natural logarithm of a double-precision floating-poin
 	sub edi, 0b110101
 	not edi
 	mov ecx, edi
-	sub rdx, rdi
+	sub edx, edi
 	
 	shl rsi, cl
 	movq xmm0, rsi
-	inc dx
+	inc edx
 	
 	.notDenormal:
-		sub rdx, 0x3ff
+		sub edx, 0x3ff
 		movq rdi, xmm0
 		mov rsi, 0x3fffffffffffffff
 		and rdi, rsi
@@ -264,6 +264,7 @@ log64:				; calculates the natural logarithm of a double-precision floating-poin
 	
 	mov rdi, 0x3fe62e42fefa39ef
 	movq xmm1, rdi
+	movsx rdx, edx
 	cvtsi2sd xmm2, rdx
 	mulsd xmm1, xmm2
 	addsd xmm0, xmm1
